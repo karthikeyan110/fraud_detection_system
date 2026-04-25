@@ -43,7 +43,7 @@ time_val = st.sidebar.number_input("Time", 0.0, 200000.0, 10000.0)
 
 
 # -------------------------------
-# PREDICT BUTTON (API CALL)
+# PREDICT BUTTON (NATIVE CALL)
 # -------------------------------
 if st.sidebar.button("Predict"):
 
@@ -54,21 +54,19 @@ if st.sidebar.button("Predict"):
     }
 
     try:
-        res = requests.post("http://127.0.0.1:8000/predict", json=sample)
+        columns_order = ["Time"] + [f"V{i}" for i in range(1, 29)] + ["Amount"]
+        df_sample = pd.DataFrame([sample])[columns_order]
+        
+        score, label, reasons = predict_transaction(df_sample)
+        insert_transaction(sample, score, label)
 
-        if res.status_code == 200:
-            result = res.json()
-
-            if result["prediction"] == "FRAUD":
-                st.sidebar.error(f"🚨 FRAUD (Score: {result['fraud_score']:.2f})")
-            else:
-                st.sidebar.success(f"✅ NORMAL (Score: {result['fraud_score']:.2f})")
-
+        if label == "FRAUD":
+            st.sidebar.error(f"🚨 FRAUD (Score: {score:.2f})")
         else:
-            st.sidebar.error("API Error")
+            st.sidebar.success(f"✅ NORMAL (Score: {score:.2f})")
 
-    except:
-        st.sidebar.error("Cannot connect to API")
+    except Exception as e:
+        st.sidebar.error(f"Prediction Error: {str(e)}")
 
 
 # -------------------------------
